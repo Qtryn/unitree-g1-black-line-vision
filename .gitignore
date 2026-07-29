@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+outputs/*
+!outputs/.gitkeep
+calibration/*.yaml
+calibration/*.jpg
+!calibration/.gitkeep
+*.mp4
+*.avi
+calibration/tuned_parameters.yaml
+calibration/tuned_parameters.jpg

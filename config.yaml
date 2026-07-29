@@ -1,0 +1,151 @@
+camera:
+  width: 1280
+  height: 720
+  fps: 30
+  buffer_size: 1
+  use_latest_frame_thread: true
+
+roi:
+  top_ratio: 0.36
+  bottom_ratio: 1.00
+  left_ratio: 0.06
+  right_ratio: 0.94
+
+profiles:
+  sensitive:
+    adaptive_c: 4
+    darkness_percentile: 34
+    min_component_area_ratio: 0.0008
+    min_elongation: 1.30
+    hold_updates: 8
+
+  balanced:
+    adaptive_c: 7
+    darkness_percentile: 28
+    min_component_area_ratio: 0.0012
+    min_elongation: 1.65
+    hold_updates: 6
+
+  strict:
+    adaptive_c: 10
+    darkness_percentile: 22
+    min_component_area_ratio: 0.0020
+    min_elongation: 2.20
+    hold_updates: 4
+
+detection:
+  # gray_fixed, adaptive, hsv_black, or hybrid
+  mode: hybrid
+
+  # The black tape is primarily defined by low brightness.
+  gray_max: 96
+  hsv_v_max: 100
+  hsv_s_max: 255
+
+  # Hybrid voting. In balanced mode, two masks should usually agree.
+  vote_required: 2
+  enable_gray_fixed: true
+  enable_adaptive: true
+  enable_hsv_black: true
+  enable_otsu: false
+  enable_blackhat: true
+
+  # Pixels darker than this bypass voting.
+  very_dark_max: 52
+
+segmentation:
+  blur_kernel: 5
+  clahe_clip_limit: 2.5
+  clahe_grid_size: 8
+
+  adaptive_block_size: 51
+  fixed_dark_threshold: 96
+
+  blackhat_kernel: 31
+  blackhat_threshold: 18
+
+  close_kernel: 17
+  close_iterations: 2
+  open_kernel: 5
+  open_iterations: 1
+
+  max_component_area_ratio: 0.55
+  min_solidity: 0.38
+  min_vertical_span_ratio: 0.33  # major-axis span; supports horizontal lines
+  min_bottom_proximity: 0.72
+  min_dark_contrast: 0.16
+  max_candidate_count: 10
+
+  weight_area: 0.10
+  weight_elongation: 0.16
+  weight_vertical_span: 0.18
+  weight_bottom_proximity: 0.14
+  weight_dark_contrast: 0.18
+  weight_temporal_proximity: 0.24
+
+line_model:
+  scanline_count: 18
+  scanline_band_height: 11
+  min_scanline_points: 6
+  min_continuity_ratio: 0.50
+  max_width_cv: 0.95
+  near_weight: 2.5
+
+  ransac_iterations: 160
+  ransac_distance_px: 13.0
+  min_ransac_inlier_ratio: 0.48
+
+  use_quadratic_fit: true
+  quadratic_min_points: 9
+
+  lookahead_y_ratio: 0.82
+  far_y_ratio: 0.30
+  max_abs_angle_deg: 90.0
+
+tracking:
+  center_alpha: 0.40
+  angle_alpha: 0.34
+  confidence_alpha: 0.42
+
+  reset_after_updates: 15
+  max_center_jump_norm: 0.30
+  max_angle_jump_deg: 24.0
+
+control:
+  lateral_deadband_norm: 0.035
+  angle_deadband_deg: 3.0
+
+  yaw_kp: 0.022
+  lateral_kp: 0.85
+  forward_speed: 0.22
+  align_forward_speed: 0.08
+
+  max_yaw_command: 0.55
+  max_lateral_command: 0.35
+
+  line_end_missing_updates: 9
+  line_end_min_previous_confidence: 0.45
+
+calibration:
+  tuning_file: calibration/tuned_parameters.yaml
+  birdseye_enabled: false
+  homography_file: calibration/homography.yaml
+  output_width: 800
+  output_height: 800
+  pixels_per_cm_x: 0.0
+  pixels_per_cm_y: 0.0
+
+display:
+  window_name: Unitree G1 - Black Line Vision V3
+  output_dir: outputs
+  canvas_width: 1600
+  canvas_height: 900
+
+  show_mask_overlay: true
+  show_debug_points: true
+  show_candidate_contours: false
+  show_threshold_panel: false
+
+  mask_alpha: 0.30
+  line_thickness: 5
+  point_radius: 5

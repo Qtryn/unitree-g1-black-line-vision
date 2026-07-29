@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Calibrate Camera 1",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/calibrate_parameters.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--source",
+        "1",
+        "--profile",
+        "balanced",
+        "--load-existing"
+      ]
+    },
+    {
+      "name": "Run Camera 1 Tuned",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--source",
+        "1",
+        "--profile",
+        "balanced"
+      ]
+    },
+    {
+      "name": "Sample Image",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--source",
+        "samples/line_center.jpg",
+        "--image",
+        "--profile",
+        "balanced",
+        "--no-tuning"
+      ]
+    }
+  ]
+}

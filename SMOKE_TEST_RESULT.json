@@ -1,0 +1,37 @@
+{
+  "line_center.jpg": {
+    "detected": true,
+    "confidence": 0.9202655063470241,
+    "angle_deg": -2.3451335813511442,
+    "lateral_error_norm": 0.005111281200576048,
+    "state": "FORWARD"
+  },
+  "line_left.jpg": {
+    "detected": true,
+    "confidence": 0.9220196992980733,
+    "angle_deg": -20.77326303549482,
+    "lateral_error_norm": -0.4480357156087918,
+    "state": "TURN_LEFT"
+  },
+  "line_right.jpg": {
+    "detected": true,
+    "confidence": 0.9231910630832988,
+    "angle_deg": 26.14031239669324,
+    "lateral_error_norm": 0.4521845792387741,
+    "state": "TURN_RIGHT"
+  },
+  "no_line_distractors.jpg": {
+    "detected": false,
+    "confidence": 0.0,
+    "angle_deg": null,
+    "lateral_error_norm": null,
+    "state": "LINE_LOST"
+  },
+  "line_horizontal.jpg": {
+    "detected": true,
+    "confidence": 0.6333153434562546,
+    "angle_deg": 90.0,
+    "lateral_error_norm": 0.0008873114463176575,
+    "state": "TURN_RIGHT"
+  }
+}
