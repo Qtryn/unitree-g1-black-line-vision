@@ -14,7 +14,7 @@ import yaml
 from controller import LineController
 from models import ControlResult, VisionResult
 from tracker import StableLineTracker
-from tuning import apply_tuning
+from tuning import apply_tuning, deep_merge
 from ui import compose_dashboard
 from vision import BlackTapeVision
 
@@ -30,6 +30,33 @@ def load_config(path: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("config.yaml must contain a mapping.")
     return data
+
+
+def load_processing_presets(
+    path: str | None,
+) -> tuple[dict[str, dict[str, Any]], str | None]:
+    if path is None:
+        return {}, None
+
+    preset_path = Path(path)
+    if not preset_path.exists():
+        raise FileNotFoundError(
+            f"Processing preset file not found: {preset_path}"
+        )
+    data = yaml.safe_load(
+        preset_path.read_text(encoding="utf-8")
+    ) or {}
+    presets = data.get("presets", {})
+    if not isinstance(presets, dict) or not presets:
+        raise ValueError(
+            f"Processing preset file has no presets: {preset_path}"
+        )
+    default_name = data.get("default")
+    if default_name is not None and default_name not in presets:
+        raise ValueError(
+            f"Unknown default processing preset: {default_name}"
+        )
+    return presets, default_name
 
 
 def parse_source(value: str) -> int | str:
@@ -79,10 +106,28 @@ class LatestFrameCapture:
         self,
         source: int | str,
         camera_cfg: dict[str, Any],
+        *,
+        loop_file: bool = False,
+        realtime_file: bool = True,
     ) -> None:
         self.capture = open_capture(source, camera_cfg)
+        self.file_source = (
+            isinstance(source, str)
+            and Path(source).is_file()
+        )
+        self.loop_file = loop_file
+        self.realtime_file = realtime_file
+        source_fps = float(self.capture.get(cv2.CAP_PROP_FPS))
+        self.file_frame_period = (
+            1.0 / source_fps
+            if self.file_source and source_fps > 1e-6
+            else 0.0
+        )
+        self.next_file_frame_time: float | None = None
+        self.looped = False
+        self.ended = False
         self.threaded = (
-            isinstance(source, int)
+            not self.file_source
             and bool(camera_cfg["use_latest_frame_thread"])
         )
 
@@ -90,6 +135,8 @@ class LatestFrameCapture:
         self.stop_event = threading.Event()
         self.latest_frame: np.ndarray | None = None
         self.latest_ok = False
+        self.latest_sequence = 0
+        self.returned_sequence = 0
         self.worker: threading.Thread | None = None
 
         if self.threaded:
@@ -109,14 +156,53 @@ class LatestFrameCapture:
             with self.lock:
                 self.latest_ok = True
                 self.latest_frame = frame
+                self.latest_sequence += 1
 
     def read(self) -> tuple[bool, np.ndarray | None]:
         if not self.threaded:
-            return self.capture.read()
+            self.looped = False
+            if (
+                self.file_source
+                and self.realtime_file
+                and self.file_frame_period > 0.0
+            ):
+                now = time.perf_counter()
+                if self.next_file_frame_time is None:
+                    self.next_file_frame_time = now
+                elif now < self.next_file_frame_time:
+                    time.sleep(self.next_file_frame_time - now)
+
+            ok, frame = self.capture.read()
+            if not ok and self.file_source and self.loop_file:
+                self.capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ok, frame = self.capture.read()
+                self.looped = bool(ok)
+            self.ended = self.file_source and not ok
+
+            if (
+                ok
+                and self.file_source
+                and self.realtime_file
+                and self.file_frame_period > 0.0
+            ):
+                now = time.perf_counter()
+                if self.looped or self.next_file_frame_time is None:
+                    self.next_file_frame_time = now + self.file_frame_period
+                else:
+                    self.next_file_frame_time = max(
+                        self.next_file_frame_time + self.file_frame_period,
+                        now,
+                    )
+            return ok, frame
 
         with self.lock:
-            if not self.latest_ok or self.latest_frame is None:
+            if (
+                not self.latest_ok
+                or self.latest_frame is None
+                or self.latest_sequence == self.returned_sequence
+            ):
                 return False, None
+            self.returned_sequence = self.latest_sequence
             return True, self.latest_frame.copy()
 
     def release(self) -> None:
@@ -220,10 +306,30 @@ def run_stream(
     config: dict[str, Any],
     initial_profile: str,
     tuning_loaded: bool,
+    loop_video: bool,
+    preset_base_config: dict[str, Any],
+    processing_presets: dict[str, dict[str, Any]],
+    initial_processing_preset: str | None,
 ) -> None:
-    capture = LatestFrameCapture(source, config["camera"])
+    capture = LatestFrameCapture(
+        source,
+        config["camera"],
+        loop_file=loop_video,
+        realtime_file=True,
+    )
 
     profile_name = initial_profile
+    preset_names = list(processing_presets)
+    preset_index = (
+        preset_names.index(initial_processing_preset)
+        if initial_processing_preset in preset_names
+        else 0
+    )
+    processing_preset = (
+        preset_names[preset_index]
+        if preset_names
+        else None
+    )
     vision = BlackTapeVision(config, profile_name)
     tracker = StableLineTracker(config, profile_name)
     controller = LineController(config)
@@ -244,8 +350,16 @@ def run_stream(
             if not paused:
                 ok, frame = capture.read()
                 if not ok or frame is None:
+                    if capture.ended:
+                        break
                     time.sleep(0.005)
                     continue
+                if capture.looped:
+                    vision.reset()
+                    tracker.reset()
+                    controller.reset()
+                    previous_time = time.perf_counter()
+                    fps = 0.0
 
                 raw_result, threshold_masks = vision.detect(frame)
                 result = tracker.update(raw_result)
@@ -265,6 +379,11 @@ def run_stream(
 
                 label = (
                     f"{profile_name} | {config['detection']['mode']}"
+                    + (
+                        f" | {processing_preset}"
+                        if processing_preset is not None
+                        else ""
+                    )
                     + (" | tuned" if tuning_loaded else "")
                 )
                 dashboard = compose_dashboard(
@@ -307,6 +426,24 @@ def run_stream(
                 tracker.reset()
                 controller.reset()
                 print(f"Profile: {profile_name}")
+                continue
+
+            if key in (ord("["), ord("]")) and preset_names:
+                step = -1 if key == ord("[") else 1
+                preset_index = (
+                    preset_index + step
+                ) % len(preset_names)
+                processing_preset = preset_names[preset_index]
+                config = deep_merge(
+                    preset_base_config,
+                    processing_presets[processing_preset],
+                )
+                vision = BlackTapeVision(config, profile_name)
+                tracker = StableLineTracker(config, profile_name)
+                controller = LineController(config)
+                print(
+                    f"Processing preset: {processing_preset}"
+                )
                 continue
 
             if key == ord("m"):
@@ -380,6 +517,21 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Ignore saved calibration parameters.",
     )
+    parser.add_argument(
+        "--loop-video",
+        action="store_true",
+        help="Loop video-file sources and reset temporal tracking at each restart.",
+    )
+    parser.add_argument(
+        "--preset-file",
+        default=None,
+        help="Optional YAML containing named processing configurations.",
+    )
+    parser.add_argument(
+        "--processing-preset",
+        default=None,
+        help="Initial named processing configuration from --preset-file.",
+    )
     parser.add_argument("--image", action="store_true")
     return parser.parse_args()
 
@@ -402,6 +554,24 @@ def main() -> None:
         base_config,
         tuning_path,
     )
+    preset_base_config = config
+    processing_presets, default_processing_preset = (
+        load_processing_presets(args.preset_file)
+    )
+    processing_preset = (
+        args.processing_preset
+        if args.processing_preset is not None
+        else default_processing_preset
+    )
+    if processing_preset is not None:
+        if processing_preset not in processing_presets:
+            raise ValueError(
+                f"Unknown processing preset: {processing_preset}"
+            )
+        config = deep_merge(
+            preset_base_config,
+            processing_presets[processing_preset],
+        )
 
     if tuning_loaded:
         print(f"Loaded tuning: {tuning_path}")
@@ -421,6 +591,10 @@ def main() -> None:
             config,
             args.profile,
             tuning_loaded,
+            args.loop_video,
+            preset_base_config,
+            processing_presets,
+            processing_preset,
         )
 
 

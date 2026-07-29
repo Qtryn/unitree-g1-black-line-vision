@@ -1,0 +1,108 @@
+# Fixed HSV-black configurations evaluated on
+# ../../lab/scripts/demo/line_video.mp4.
+#
+# All presets use the same segmentation path. They vary only the operating
+# point so recall and temporal stability can be compared with the [ and ] keys.
+
+default: stable
+
+presets:
+  conservative:
+    roi:
+      top_ratio: 0.60
+      bottom_ratio: 1.00
+      left_ratio: 0.10
+      right_ratio: 0.90
+    detection:
+      mode: hsv_black
+      hsv_v_max: 80
+      hsv_s_max: 255
+    segmentation:
+      close_kernel: 7
+      close_iterations: 1
+      open_kernel: 3
+      open_iterations: 1
+      max_component_area_ratio: 0.75
+      min_vertical_span_ratio: 0.12
+      min_bottom_proximity: 0.15
+      min_dark_contrast: 0.08
+    profiles:
+      balanced:
+        min_component_area_ratio: 0.0002
+        min_elongation: 1.30
+        hold_updates: 6
+
+  stable:
+    roi:
+      top_ratio: 0.60
+      bottom_ratio: 1.00
+      left_ratio: 0.10
+      right_ratio: 0.90
+    detection:
+      mode: hsv_black
+      hsv_v_max: 95
+      hsv_s_max: 255
+    segmentation:
+      close_kernel: 7
+      close_iterations: 1
+      open_kernel: 3
+      open_iterations: 1
+      max_component_area_ratio: 0.75
+      min_vertical_span_ratio: 0.08
+      min_bottom_proximity: 0.15
+      min_dark_contrast: 0.04
+    profiles:
+      balanced:
+        min_component_area_ratio: 0.0002
+        min_elongation: 1.30
+        hold_updates: 6
+
+  bright:
+    roi:
+      top_ratio: 0.60
+      bottom_ratio: 1.00
+      left_ratio: 0.10
+      right_ratio: 0.90
+    detection:
+      mode: hsv_black
+      hsv_v_max: 110
+      hsv_s_max: 255
+    segmentation:
+      close_kernel: 7
+      close_iterations: 1
+      open_kernel: 3
+      open_iterations: 1
+      max_component_area_ratio: 0.75
+      min_vertical_span_ratio: 0.08
+      min_bottom_proximity: 0.15
+      min_dark_contrast: 0.04
+    profiles:
+      balanced:
+        min_component_area_ratio: 0.0002
+        min_elongation: 1.30
+        hold_updates: 6
+
+  high_recall:
+    roi:
+      top_ratio: 0.60
+      bottom_ratio: 1.00
+      left_ratio: 0.10
+      right_ratio: 0.90
+    detection:
+      mode: hsv_black
+      hsv_v_max: 95
+      hsv_s_max: 255
+    segmentation:
+      close_kernel: 7
+      close_iterations: 1
+      open_kernel: 3
+      open_iterations: 1
+      max_component_area_ratio: 0.75
+      min_vertical_span_ratio: 0.05
+      min_bottom_proximity: 0.15
+      min_dark_contrast: 0.04
+    profiles:
+      balanced:
+        min_component_area_ratio: 0.0002
+        min_elongation: 1.30
+        hold_updates: 6

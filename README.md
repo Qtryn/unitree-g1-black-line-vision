@@ -121,6 +121,7 @@ flowchart TD
 | `R` | Reset tracker |
 | `S` | Lưu dashboard và JSON |
 | `P` | Pause |
+| `[` / `]` | Chuyển processing preset khi dùng `--preset-file` |
 | `Q` hoặc `Esc` | Thoát |
 
 ## Kiểm thử ảnh mẫu
@@ -135,6 +136,63 @@ Chạy smoke test:
 ```powershell
 python tests\smoke_test.py
 ```
+
+## Video đánh giá trong HeinekenRobot
+
+Chạy detector trên toàn bộ `lab/scripts/demo/line_video.mp4` theo đúng tốc độ
+khung hình đã ghi và tự động phát lại:
+
+```bash
+cd externals/unitree-g1-black-line-vision
+python app.py \
+  --source ../../lab/scripts/demo/line_video.mp4 \
+  --profile balanced \
+  --preset-file video_processing_presets.yaml \
+  --processing-preset stable \
+  --loop-video
+```
+
+Các preset trong `video_processing_presets.yaml` đều dùng cùng pipeline
+`hsv_black`; chúng chỉ thay đổi ROI và độ chặt. Nhấn `[` hoặc `]` trong cửa sổ
+chính để chuyển preset trên cùng video. `stable` là mặc định vì thử nghiệm trên
+117 frame cho kết quả cân bằng tốt nhất giữa tỷ lệ nhận và độ ổn định.
+
+Mở giao diện calibration trên cùng video. Video tự động phát lại để có thể
+chỉnh trackbar và xem ngay kết quả:
+
+```bash
+cd externals/unitree-g1-black-line-vision
+python calibrate_parameters.py \
+  --source ../../lab/scripts/demo/line_video.mp4 \
+  --profile balanced
+```
+
+Trong cửa sổ, nhấn `P` để dừng tại một frame, `R` để reset tracker, và `Q` hoặc
+`Esc` để thoát. Giao diện calibration tự động reset trạng thái temporal mỗi lần
+video quay lại frame đầu.
+
+## D435i MJPEG trực tiếp
+
+Mở dashboard detector từ camera đầu D435i:
+
+```bash
+bash externals/unitree-g1-black-line-vision/run_d435i_mjpeg.sh
+```
+
+Hoặc chạy thủ công từ thư mục reference:
+
+```bash
+python app.py \
+  --source 'http://172.28.182.149:8080/api/sensors/d435i/color/mjpeg?camera=d435i_head' \
+  --profile balanced \
+  --preset-file video_processing_presets.yaml \
+  --processing-preset stable \
+  --no-tuning
+```
+
+Endpoint là stream MJPEG liên tục 640x480 ở khoảng 25 FPS. Reader thread luôn
+giữ frame mới nhất để tránh tích lũy độ trễ. Nhấn `[` hoặc `]` để so sánh các
+processing preset trên live stream.
 
 ## Lưu ý an toàn
 
@@ -188,4 +246,3 @@ line_model:
 ```
 
 Nếu file tuning cũ không chứa tham số này thì hệ thống sẽ lấy giá trị `90.0` từ `config.yaml`.
-

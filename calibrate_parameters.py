@@ -430,6 +430,8 @@ def main() -> None:
     capture = LatestFrameCapture(
         parse_source(str(args.source)),
         config["camera"],
+        loop_file=True,
+        realtime_file=True,
     )
     vision = BlackTapeVision(config, args.profile)
     tracker = StableLineTracker(config, args.profile)
@@ -457,8 +459,16 @@ def main() -> None:
             if not paused or last_frame is None:
                 ok, frame = capture.read()
                 if not ok or frame is None:
+                    if capture.ended:
+                        break
                     time.sleep(0.005)
                     continue
+                if capture.looped:
+                    vision.reset()
+                    tracker.reset()
+                    controller.reset()
+                    previous_time = time.perf_counter()
+                    fps = 0.0
                 last_frame = frame
             else:
                 frame = last_frame.copy()
