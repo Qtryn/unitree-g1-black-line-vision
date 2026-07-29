@@ -189,30 +189,3 @@ line_model:
 
 Nếu file tuning cũ không chứa tham số này thì hệ thống sẽ lấy giá trị `90.0` từ `config.yaml`.
 
-## Upload GitHub tự động
-
-Project có sẵn script PowerShell để tạo repository và push lên tài khoản `Qtryn`:
-
-```powershell
-.\publish_to_github.ps1
-```
-
-Repository mặc định:
-
-```text
-Qtryn/unitree-g1-black-line-vision
-```
-
-Tạo private repository:
-
-```powershell
-.\publish_to_github.ps1 -Visibility private
-```
-
-Đổi tên repository:
-
-```powershell
-.\publish_to_github.ps1 -Repo ten-repository-moi
-```
-
-Script sẽ kiểm tra `git`, GitHub CLI, tài khoản đang đăng nhập, `.gitignore`, commit và push.
